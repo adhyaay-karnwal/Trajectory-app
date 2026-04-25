@@ -1,4 +1,4 @@
-# Trajectory - Space Mission Planner
+# [Trajectory](https://trajectoryapp-fawn.vercel.app) - Space Mission Planner
 
 A space mission planning application built for Ridgehacks 2026.
 

@@ -9,21 +9,21 @@
 
     <g id="dust-layer">
       <ellipse cx="912" cy="720" fill="#B0BEC5" opacity="0">
-        <animate attributeName="rx" values="0; 0; 100; 140; 140" keyTimes="0; 0.74; 0.77; 0.85; 1" dur="0.15s" repeatCount="indefinite" />
-        <animate attributeName="ry" values="0; 0; 20; 30; 30" keyTimes="0; 0.74; 0.77; 0.85; 1" dur="0.15s" repeatCount="indefinite" />
-        <animate attributeName="opacity" values="0; 0; 0.7; 0; 0" keyTimes="0; 0.74; 0.76; 0.85; 1" dur="0.15s" repeatCount="indefinite" />
+        <animate attributeName="rx" values="0; 0; 100; 140; 140" keyTimes="0; 0.74; 0.77; 0.85; 1" dur="0.6s" repeatCount="indefinite" />
+        <animate attributeName="ry" values="0; 0; 20; 30; 30" keyTimes="0; 0.74; 0.77; 0.85; 1" dur="0.6s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0; 0; 0.7; 0; 0" keyTimes="0; 0.74; 0.76; 0.85; 1" dur="0.6s" repeatCount="indefinite" />
       </ellipse>
       <ellipse cy="720" fill="#B0BEC5" opacity="0">
-        <animate attributeName="cx" values="880; 880; 780; 750; 750" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.15s" repeatCount="indefinite" />
-        <animate attributeName="rx" values="0; 0; 50; 70; 70" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.15s" repeatCount="indefinite" />
-        <animate attributeName="ry" values="0; 0; 12; 18; 18" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.15s" repeatCount="indefinite" />
-        <animate attributeName="opacity" values="0; 0; 0.6; 0; 0" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.15s" repeatCount="indefinite" />
+        <animate attributeName="cx" values="880; 880; 780; 750; 750" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.6s" repeatCount="indefinite" />
+        <animate attributeName="rx" values="0; 0; 50; 70; 70" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.6s" repeatCount="indefinite" />
+        <animate attributeName="ry" values="0; 0; 12; 18; 18" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.6s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0; 0; 0.6; 0; 0" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.6s" repeatCount="indefinite" />
       </ellipse>
       <ellipse cy="720" fill="#B0BEC5" opacity="0">
-        <animate attributeName="cx" values="944; 944; 1044; 1074; 1074" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.15s" repeatCount="indefinite" />
-        <animate attributeName="rx" values="0; 0; 50; 70; 70" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.15s" repeatCount="indefinite" />
-        <animate attributeName="ry" values="0; 0; 12; 18; 18" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.15s" repeatCount="indefinite" />
-        <animate attributeName="opacity" values="0; 0; 0.6; 0; 0" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.15s" repeatCount="indefinite" />
+        <animate attributeName="cx" values="944; 944; 1044; 1074; 1074" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.6s" repeatCount="indefinite" />
+        <animate attributeName="rx" values="0; 0; 50; 70; 70" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.6s" repeatCount="indefinite" />
+        <animate attributeName="ry" values="0; 0; 12; 18; 18" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.6s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0; 0; 0.6; 0; 0" keyTimes="0; 0.74; 0.78; 0.85; 1" dur="0.6s" repeatCount="indefinite" />
       </ellipse>
     </g>
 
@@ -31,7 +31,7 @@
       <animateTransform
           attributeName="transform"
           type="translate"
-          dur="0.15s"
+          dur="0.6s"
           values="0,0; 0,0; 0,-350; 0,-350; 0,0; 0,0"
           keyTimes="0; 0.12; 0.25; 0.58; 0.75; 1"
           keySplines="0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1"
@@ -42,7 +42,7 @@
         <animateTransform
             attributeName="transform"
             type="translate"
-            dur="0.15s"
+            dur="0.6s"
             values="0,0; 0,0; 8,0; -8,0; 6,0; -6,0; 4,0; -4,0; 0,0; 0,0; 0,35; 0,-12; 0,0; 0,0"
             keyTimes="0; 0.08; 0.10; 0.12; 0.14; 0.16; 0.18; 0.20; 0.22; 0.74; 0.75; 0.78; 0.82; 1"
             repeatCount="indefinite" />
@@ -60,8 +60,8 @@
                              M -30,0 C -30,0 0,0 0,0 C 0,0 30,0 30,0 Z;
                              M -30,0 C -30,0 0,0 0,0 C 0,0 30,0 30,0 Z"
                      keyTimes="0; 0.08; 0.10; 0.15; 0.25; 0.45; 0.58; 1"
-                     dur="0.15s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0; 0; 0.9; 0.9; 0.9; 0.5; 0; 0" keyTimes="0; 0.08; 0.10; 0.15; 0.25; 0.45; 0.58; 1" dur="0.15s" repeatCount="indefinite" />
+                     dur="0.6s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0; 0; 0.9; 0.9; 0.9; 0.5; 0; 0" keyTimes="0; 0.08; 0.10; 0.15; 0.25; 0.45; 0.58; 1" dur="0.6s" repeatCount="indefinite" />
           </path>
 
           <path fill="#FFB74D" opacity="0">
@@ -75,8 +75,8 @@
                              M -25,0 C -25,0 0,0 0,0 C 0,0 25,0 25,0 Z;
                              M -25,0 C -25,0 0,0 0,0 C 0,0 25,0 25,0 Z"
                      keyTimes="0; 0.08; 0.10; 0.15; 0.25; 0.45; 0.58; 1"
-                     dur="0.15s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0; 0; 0.9; 0.9; 0.9; 0.5; 0; 0" keyTimes="0; 0.08; 0.10; 0.15; 0.25; 0.45; 0.58; 1" dur="0.15s" repeatCount="indefinite" />
+                     dur="0.6s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0; 0; 0.9; 0.9; 0.9; 0.5; 0; 0" keyTimes="0; 0.08; 0.10; 0.15; 0.25; 0.45; 0.58; 1" dur="0.6s" repeatCount="indefinite" />
           </path>
           
           <path fill="#FFF59D" opacity="0">
@@ -90,8 +90,8 @@
                              M -12,0 C -12,0 0,0 0,0 C 0,0 12,0 12,0 Z;
                              M -12,0 C -12,0 0,0 0,0 C 0,0 12,0 12,0 Z"
                      keyTimes="0; 0.08; 0.10; 0.15; 0.25; 0.45; 0.58; 1"
-                     dur="0.15s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0; 0; 1; 1; 1; 0.5; 0; 0" keyTimes="0; 0.08; 0.10; 0.15; 0.25; 0.45; 0.58; 1" dur="0.15s" repeatCount="indefinite" />
+                     dur="0.6s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0; 0; 1; 1; 1; 0.5; 0; 0" keyTimes="0; 0.08; 0.10; 0.15; 0.25; 0.45; 0.58; 1" dur="0.6s" repeatCount="indefinite" />
           </path>
         </g>
 

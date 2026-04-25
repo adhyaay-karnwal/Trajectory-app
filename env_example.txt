@@ -1,0 +1,59 @@
+# Copy to .env.local and fill in. Link the dev deployment with:
+#   npx convex dev --once --configure existing --project petal
+# (use --team <slug> if you have multiple teams)
+
+# Convex (written by `npx convex dev` when linked)
+CONVEX_DEPLOYMENT=dev:your-deployment-name
+NEXT_PUBLIC_CONVEX_URL=https://your-deployment-name.convex.cloud
+NEXT_PUBLIC_CONVEX_SITE_URL=https://your-deployment-name.convex.site
+
+# WorkOS AuthKit
+WORKOS_CLIENT_ID=client_your_client_id_here
+WORKOS_API_KEY=sk_test_your_api_key_here
+WORKOS_COOKIE_PASSWORD=your_secure_password_here_must_be_at_least_32_characters_long
+NEXT_PUBLIC_WORKOS_REDIRECT_URI=http://localhost:3000/callback
+
+# Admin emails (comma-separated) - users with these emails will be granted admin role on first login
+ADMIN_EMAILS=adhyaay.karnwal@gmail.com,realandrewhunter@gmail.com
+
+─── AI ───────────────────────────────────────────────────────────────────────
+ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+TAVILY_API_KEY=
+
+# ─── Maps ─────────────────────────────────────────────────────────────────────
+NEXT_PUBLIC_MAPBOX_TOKEN=
+GOOGLE_API_KEY=
+GOOGLE_MAPS_API_KEY=
+
+# ─── Property & Parcel ────────────────────────────────────────────────────────
+REGRID_API_KEY=
+ATTOM_API_KEY=
+RENTCAST_API_KEY=
+REA_MCP_URL=
+RAPIDAPI_KEY=
+
+# ─── Zoning & Entitlements ───────────────────────────────────────────────────
+ZONEOMICS_API_KEY=
+SHOVELS_API_KEY=
+
+# ─── Environmental & Terrain ──────────────────────────────────────────────────
+OPENTOPOGRAPHY_API_KEY=
+
+# ─── Market & Demographics ───────────────────────────────────────────────────
+CENSUS_API_KEY=
+
+# ─── Listings & Scraping ─────────────────────────────────────────────────────
+APIFY_TOKEN=
+LOOPNET_API_URL=
+
+# ─── Vector Search ───────────────────────────────────────────────────────────
+PINECONE_API_KEY=
+
+# ─── Pro Forma Builder ───────────────────────────────────────────────────────
+UNIVER_API_KEY=
+UNIVER_MCP_URL=
+
+# ─── Memory ──────────────────────────────────────────────────────────────────
+SUPERMEMORY_API_KEY=
+SUPERMEMORY_PROJECT_ID=

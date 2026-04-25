@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Manrope } from "next/font/google";
+import { Manrope, Geist_Mono } from "next/font/google";
+import { ConvexClientProvider } from "@/components/providers/convex-client-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
 
 const canela = localFont({
   src: [
@@ -32,23 +33,33 @@ const manrope = Manrope({
   display: "swap",
 });
 
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Nura",
-  description: "The AI Intelligence Layer for Real Estate",
+  title: "Trajectory",
+  description: "AI-Powered Space Mission Planning",
+  icons: {
+    icon: "/trajectory-favicon.svg",
+  },
 };
 
-export default function RootLayout({
+export default function AppLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
-        className={`${canela.variable} ${manrope.variable} antialiased`}
+        className={`${canela.variable} ${manrope.variable} ${geistMono.variable} antialiased`}
       >
-        <Navbar />
-        {children}
+        <ThemeProvider>
+          <ConvexClientProvider>{children}</ConvexClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

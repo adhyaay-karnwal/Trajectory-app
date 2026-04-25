@@ -1,0 +1,1409 @@
+VALUE PROPOSITION AND BASIC INFO:
+
+**What Nura is (for a new teammate)**
+
+Nura is a **real-estate intelligence web app** that combines a modern UI with a **tool-using AI copilot** to help users answer questions like: *What can I build here? What’s the zoning? What’s the risk? What do comps say? What’s the approval path?* It’s designed to turn messy, multi-source property due diligence into **structured data + clear narrative outputs** and (when needed) **shareable PDF reports**.
+
+## Nura: The Intelligence Layer for Real Estate Development
+
+**The Problem**
+
+Real estate development is a $1.3T+ annual industry in the US alone, yet the due diligence process remains shockingly manual. Before breaking ground on any project, developers must answer fundamental questions: *What can I build here? What are the risks? Does the deal pencil?*
+
+Today, answering these questions requires stitching together data from dozens of fragmented sources—municipal zoning codes, flood maps, environmental databases, permit records, rental comps, demographic data. A single feasibility analysis can take an experienced analyst 20-40 hours and still miss critical risks. This friction slows deal velocity, increases capital costs, and causes good sites to be passed over.
+
+**The Solution**
+
+Nura is an AI-powered intelligence platform that transforms weeks of manual due diligence into minutes. We've built an agentic system that doesn't just retrieve data—it *reasons* across multiple sources simultaneously, synthesizes findings, and delivers institutional-grade analysis in natural language and structured reports.
+
+Think of it as giving every developer access to a team of analysts who have instant recall of every zoning code, every flood zone, every comparable transaction, and every permit pathway in the country.
+
+**Why Now**
+
+Three converging forces make this the right moment:
+
+1. **LLM capabilities** have crossed the threshold where AI can reliably interpret complex regulatory documents and synthesize multi-source analysis
+2. **Data availability** has improved dramatically—most of the inputs we need are now digitized and accessible via API
+3. **Market pressure**—rising interest rates and construction costs mean developers need to move faster and underwrite more precisely to make deals work
+
+At a practical level, Nura has three core experiences:
+
+- **1) Nura Chat (the copilot)**
+
+A ChatGPT-style interface where the assistant can **call internal tools** (zoning lookup, flood history, market demographics, environmental risks, rental comps, commercial listings, etc.), then synthesize the results into an answer. The UI supports **streaming responses** and can render **structured cards** (like property cards or suggestion lists) alongside plain text.
+
+- **2) Zoning / feasibility report generation**
+
+A pipeline that pulls zoning + permitting + hazard context, normalizes it into an internal “report snapshot”, and can generate a **PDF via AWS Lambda** stored in **S3**. This is for deliverable-style outputs (investor/lender/client-ready documents).
+
+- **3) Pro forma copilot (spreadsheet assistant)**
+
+A specialized chat route where the assistant can operate on spreadsheets via an MCP bridge (UniverJS MCP), to help build or modify underwriting models while keeping context about the active sheet/range.
+
+---
+
+**How the product is built (architecture in one paragraph)**
+
+Nura is a **Next.js 15 App Router** application (web/) that runs both the frontend and server endpoints. The “backend” is mostly implemented as **Next API routes** (/api/...) that call into a rich **server-side lib layer** (web/src/lib/**) for business logic and integrations. Authentication is handled by **Better Auth** (email/password + optional Google OAuth), with optional Postgres or Dynamo persistence. Many “power features” depend on external APIs (zoning, permits, flood, comps, etc.) and AWS services (S3/SES/Lambda). A separate optional service (loopnet-mcp-server/) provides a dedicated REST API for LoopNet commercial search.
+
+---
+
+**What makes Nura different from a normal “chat app”**
+
+The assistant is not just generating text. It’s an
+
+**agent**
+
+that can:
+
+- Detect when it needs data (e.g., “user gave an address”) and call the right internal tool.
+- Pull structured datasets from multiple sources.
+- Compress and manage context so conversations stay usable and affordable.
+- Return both **natural language** and **structured UI payloads** that the frontend can render (autocomplete suggestions, property cards, etc.).
+
+This is why Nura’s “real product” lives in its tool layer and orchestration logic—not only in UI.
+
+---
+
+**Who can use it (security + gating)**
+
+Nura has two levels of access control:
+
+- **Authentication**: users sign in (or use dev bypass locally).
+- **Authorization**: non-admin users may still be blocked until explicitly granted access. Access records are stored in S3 (a small JSON allowlist), and admins are determined by configured email allowlists.
+
+So “signed in” ≠ “allowed into the product.”
+
+---
+
+**What data Nura stores**
+
+Different parts of the system persist in different places:
+
+- **Postgres**: chat conversation history (and optionally auth, depending on env).
+- **S3**: auth audit logs, access-control state, and report artifacts (PDFs, sometimes memo markdown).
+- **Local JSON filesystem storage**: lightweight snapshots and report history entries (best-effort; may be ephemeral on serverless unless configured).
+
+---
+
+**The day-to-day mental model for working on it**
+
+As you build features, you typically touch one of these slices:
+
+- **UI slice**: web/src/app/** and web/src/components/**
+- **API slice**: web/src/app/api/**/route.ts (request validation + orchestration)
+- **Domain/tool slice**: web/src/lib/** (the “engine room”: tool execution, integrations, normalization)
+- **Persistence slice**: web/src/lib/db/** (chat) and AWS-backed storage (access control, PDFs)
+
+Most “new product capabilities” are implemented by adding/updating a **tool** (server-side) and then teaching the copilot orchestration to use it well, rather than only adding UI.
+
+Access Nura at www.nura.construction
+
+## Overview
+
+Build an AI-powered zoning lookup tool using NYC's official zoning datasets. You'll load real parcel and entitlement data into a PostgreSQL database, integrate it with an LLM for natural language queries, and create a clean UI to interact with it.
+
+**Time Expectation:** 6–8 hours for core requirements (don't spend more than 12 including bonuses)
+
+---
+
+## Core Requirements
+
+### 1. Data Pipeline
+
+**Download the following datasets** from [NYC Planning Resources](https://www.nyc.gov/content/planning/pages/resources?search=zoning#datasets):
+
+**Required:**
+
+- **NYC Zoning Tax Lot Database** — Contains up-to-date zoning designations and zoning map numbers for every tax lot in NYC
+- **Zoning Application Portal (ZAP)** — Land use applications data including project tracking, descriptions, and tax lot data for ~30,000 projects since the late 1970s
+
+**Optional (for richer answers):**
+
+- **NYC GIS Zoning Features** — Zoning districts, special purpose districts, commercial overlays, limited height districts
+
+**Store the data in AWS RDS PostgreSQL:**
+
+- Spin up an AWS RDS PostgreSQL instance (free tier is fine)
+- Enable the PostGIS extension for spatial queries
+- Design a schema that includes:
+    - Zoning tax lot data: BBL, address, zoning district, zoning map number
+    - ZAP data: project ID, status, description, associated tax lots, dates
+- Implement indexing for efficient lookups and cross-referencing
+
+**Deliverable:** A working database with queryable zoning and entitlement data, plus a script to recreate the schema and load the data.
+
+### 2. RAG Integration
+
+Integrate the zoning data with an LLM (OpenAI, Anthropic, or open-source) to answer natural language questions:
+
+**Zoning queries:**
+
+- "What's the zoning for 123 Broadway?"
+- "What uses are permitted in C4-2A?"
+- "What's the maximum FAR for this parcel?"
+
+**Entitlement queries (cross-referencing ZAP):**
+
+- "Are there any active land use applications near this address?"
+- "What entitlements are pending within 500 feet of this site?"
+- "Show me recent zoning amendments in this area"
+- "Has this parcel had any ULURP applications?"
+
+**Requirements:**
+
+- The LLM should retrieve relevant data and provide accurate, grounded answers
+- Implement proper tool/function calling (not string parsing)
+- Cross-reference between zoning and ZAP datasets to surface active entitlements
+- Handle ambiguous or unanswerable queries gracefully
+
+### 3. Build a UI
+
+Create a web interface where a user can:
+
+- **Search** by address or APN
+- **View** zoning designation and key attributes
+- **See active entitlements** — display any pending/active land use applications for the parcel or nearby area
+- **Chat** with the zoning data using natural language
+- **Display** the selected parcel on a 2D map
+
+---
+
+## Bonus Points
+
+### +1 – Satellite Imagery
+
+- Integrate Google Maps API (or Mapbox) to show satellite imagery layer
+- Allow toggle between satellite and standard map view
+
+### +2 – 3D Visualization
+
+- Render buildings or zoning envelopes in 3D (using Mapbox GL, Cesium, Three.js, or Deck.gl)
+- Visualize buildable area based on FAR/height limits
+- Extra credit: Show what could be built vs. what currently exists
+
+---
+
+## Tech Stack
+
+- **Database:** AWS RDS PostgreSQL with PostGIS (required)
+- **Backend:** Whatever you're comfortable with (we use Node.js + Python)
+- **LLM:** OpenAI, Anthropic, or open-source
+- **Frontend:** Any modern framework (we use React)
+- **Mapping:** Mapbox, Google Maps, Leaflet, or Deck.gl
+
+---
+
+## What We're Evaluating
+
+| Area | Weight |
+| --- | --- |
+| Data pipeline & problem-solving | 25% |
+| RAG implementation & LLM integration | 30% |
+| Code quality & architecture | 20% |
+| UI/UX & frontend polish | 15% |
+| Communication & documentation | 10% |
+| Bonus features | Extra credit |
+
+### What We're Looking For
+
+- Can you join and cross-reference multiple datasets?
+- Do you understand zoning and entitlement workflows?
+- Is your LLM integration properly grounded in real data?
+- Can you surface relevant nearby entitlements without being asked?
+
+### What We're NOT Evaluating
+
+- Pixel-perfect design
+- Loading every record in the datasets
+- Production-grade infrastructure
+
+---
+
+## Deliverables
+
+- **Working application** (deployed or runnable locally)
+- **GitHub repo** with clear README:
+    - Setup instructions (including RDS setup)
+    - Your approach and architecture decisions
+    - Trade-offs you made
+    - What you'd improve with more time
+- **`.env.example`** file with required environment variables
+- **Brief Loom video** (optional but encouraged): 2–3 min walkthrough of your solution
+
+---
+
+## Resources
+
+- [NYC Planning Data Resources](https://www.nyc.gov/content/planning/pages/resources?search=zoning#datasets)
+- [NYC Zoning Handbook](https://www.nyc.gov/site/planning/zoning/zh-online.page)
+
+---
+
+## Submission
+
+Reply with your GitHub repo link within **24 hours**. Include connection details and API keys in a `.env.example` file (we'll use our own keys to test).
+
+Good luck! 🏗️
+
+- [x]  Fix the Loopnet Integration to be able to return the API / market comps / sale comps within a radius as well as get the actual listing of a exact address
+- [x]  Aggregagte the Actors + the other API’s like zoneomics, regrid, rentcast, ie our existing API’s to create the data engine that will work in our pro forma for comps / market analysis like cap rates, NOI
+- [x]  Standardize the Tool Calling so it’s reusable across all our products like report generation, and chat.
+- [x]  Upgrade APIFY
+- [ ]  Work on report generation after all of this ( we will discuss)
+
+## Comp Filtering Architecture
+
+### The Core Problem
+
+You have properties from multiple sources (CoStar, Yardi, Apartments.com, etc.) with inconsistent schemas. A developer queries: "Show me rental comps for a 150-unit Class B garden-style multifamily in Glendale within 3 miles, built after 2010."
+
+You need to return ranked, relevant comps fast.
+
+---
+
+### Layer 1: Data Ingestion & Normalization
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    RAW DATA SOURCES                         │
+├──────────┬──────────┬──────────┬──────────┬────────────────┤
+│  Yardi   │  CoStar  │ Apartments│  MLS    │  County Records │
+│  Matrix  │          │   .com    │  Feeds  │  (Sales)        │
+└────┬─────┴────┬─────┴────┬─────┴────┬────┴───────┬─────────┘
+     │          │          │          │            │
+     ▼          ▼          ▼          ▼            ▼
+┌─────────────────────────────────────────────────────────────┐
+│              NORMALIZATION LAYER                            │
+│  • Standardize schemas to unified Property model            │
+│  • Geocode addresses → lat/lng                              │
+│  • Classify asset class (A/B/C) if missing                  │
+│  • Deduplicate across sources                               │
+│  • Confidence scoring per field                             │
+└─────────────────────────────────────────────────────────────┘
+
+```
+
+**Unified Property Schema:**
+
+```python
+class Property:
+    id: str
+    address: Address
+    coordinates: LatLng
+
+    # Physical attributes
+    property_type: Enum  # multifamily, senior, office, etc.
+    subtype: Enum        # garden, mid-rise, high-rise
+    year_built: int
+    total_units: int
+    total_sf: int
+    stories: int
+    asset_class: Enum    # A, B, C
+
+    # Unit mix
+    units: List[UnitType]  # studio, 1BR, 2BR with counts + avg SF
+
+    # Rental data (if rental comp)
+    avg_rent: float
+    rent_per_sf: float
+    occupancy: float
+    concessions: str
+    rent_by_unit_type: Dict[UnitType, RentData]
+
+    # Sales data (if sales comp)
+    sale_price: float
+    sale_date: date
+    price_per_unit: float
+    price_per_sf: float
+    cap_rate: float
+
+    # Metadata
+    source: str
+    source_confidence: float
+    last_updated: datetime
+
+```
+
+---
+
+### Layer 2: Indexing for Fast Queries
+
+You need two index types:
+
+**Geospatial Index (PostGIS or Elasticsearch)**
+
+```sql
+-- Every property gets indexed by location
+CREATE INDEX idx_properties_geo ON properties USING GIST(coordinates);
+
+-- Query: "within 3 miles of subject"
+SELECT * FROM properties
+WHERE ST_DWithin(
+    coordinates,
+    ST_MakePoint(-118.2437, 34.1425)::geography,  -- subject property
+    4828  -- 3 miles in meters
+);
+
+```
+
+**Attribute Indexes**
+
+```sql
+CREATE INDEX idx_year_built ON properties(year_built);
+CREATE INDEX idx_asset_class ON properties(asset_class);
+CREATE INDEX idx_total_units ON properties(total_units);
+CREATE INDEX idx_property_type ON properties(property_type, subtype);
+
+```
+
+---
+
+### Layer 3: The Filtering Engine
+
+This is where the magic happens. Filters cascade in order of computational cost:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    SUBJECT PROPERTY                         │
+│  150-unit Class B garden-style multifamily                  │
+│  Glendale, CA | Built 2018 | Avg rent $2,450               │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  FILTER 1: GEOGRAPHY (fastest, eliminates most)             │
+│  • Within X miles of subject (user configurable)            │
+│  • OR within same submarket boundaries                      │
+│  → 500 properties → 47 properties                           │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  FILTER 2: PROPERTY TYPE                                    │
+│  • Same property type (multifamily)                         │
+│  • Same or adjacent subtype (garden, low-rise)              │
+│  → 47 properties → 31 properties                            │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  FILTER 3: SIZE BAND                                        │
+│  • Units: ±30% of subject (105-195 units)                   │
+│  • SF: ±25% of subject (if relevant)                        │
+│  → 31 properties → 18 properties                            │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  FILTER 4: VINTAGE                                          │
+│  • Year built within range (2010-2024)                      │
+│  • OR asset class as proxy (Class B)                        │
+│  → 18 properties → 12 properties                            │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  FILTER 5: ASSET CLASS                                      │
+│  • Same class OR ±1 class (B includes some A-, C+)          │
+│  → 12 properties → 9 properties                             │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  FILTER 6: DATA RECENCY (for sales comps)                   │
+│  • Transaction within last 12-24 months                     │
+│  → 9 properties → 6 properties                              │
+└─────────────────────────────────────────────────────────────┘
+
+```
+
+---
+
+### Layer 4: Similarity Scoring & Ranking
+
+After filtering, you have ~6-20 comps. Now rank them by **similarity to subject**:
+
+```python
+def calculate_comp_score(subject: Property, comp: Property) -> float:
+    """
+    Returns 0-100 similarity score. Higher = better comp.
+    """
+    score = 0
+
+    # Distance (closer = better) — 25 points max
+    distance_miles = haversine(subject.coordinates, comp.coordinates)
+    score += max(0, 25 - (distance_miles * 5))  # lose 5 pts per mile
+
+    # Size similarity — 20 points max
+    unit_diff_pct = abs(subject.total_units - comp.total_units) / subject.total_units
+    score += max(0, 20 - (unit_diff_pct * 40))
+
+    # Vintage similarity — 20 points max
+    year_diff = abs(subject.year_built - comp.year_built)
+    score += max(0, 20 - (year_diff * 2))  # lose 2 pts per year
+
+    # Asset class match — 15 points
+    if subject.asset_class == comp.asset_class:
+        score += 15
+    elif abs(ord(subject.asset_class) - ord(comp.asset_class)) == 1:
+        score += 8  # adjacent class
+
+    # Subtype match — 10 points
+    if subject.subtype == comp.subtype:
+        score += 10
+
+    # Data quality — 10 points
+    score += comp.source_confidence * 10
+
+    return score
+
+```
+
+**Output: Ranked Comps**
+
+```
+┌─────┬───────────────────────────────────┬────────┬────────┬────────┐
+│Rank │ Property                          │ Score  │ Distance│ $/Unit │
+├─────┼───────────────────────────────────┼────────┼────────┼────────┤
+│  1  │ The Alexan Glendale (142 units)   │  94.2  │  0.4 mi │ $2,485 │
+│  2  │ Elan Glendale (168 units)         │  87.6  │  1.1 mi │ $2,520 │
+│  3  │ Carmel Gateway (135 units)        │  82.1  │  1.8 mi │ $2,410 │
+│  4  │ The Palms at Brand (122 units)    │  78.3  │  2.2 mi │ $2,380 │
+│  5  │ Glendale City Lights (180 units)  │  71.5  │  2.6 mi │ $2,550 │
+└─────┴───────────────────────────────────┴────────┴────────┴────────┘
+
+```
+
+---
+
+### Layer 5: Unit-Level Drill Down
+
+This is what John specifically asked for — filtering by **individual unit types**:
+
+```python
+class UnitTypeComp:
+    unit_type: str        # "1BR/1BA"
+    avg_sf: int           # 750
+    subject_rent: float   # $2,200
+    comp_rents: List[CompRent]
+
+class CompRent:
+    property_name: str
+    rent: float
+    rent_per_sf: float
+    concessions: str
+    last_updated: date
+
+```
+
+**UI Output:**
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ UNIT TYPE: 1BR/1BA (avg 750 SF)                                     │
+│ Subject Asking Rent: $2,200 ($2.93/SF)                              │
+├─────────────────────────────────────────────────────────────────────┤
+│ Comp                    │ Rent    │ $/SF  │ Concessions │ Updated  │
+├─────────────────────────┼─────────┼───────┼─────────────┼──────────┤
+│ Alexan Glendale         │ $2,285  │ $3.05 │ 1 mo free   │ 12/3/24  │
+│ Elan Glendale           │ $2,310  │ $2.98 │ None        │ 12/1/24  │
+│ Carmel Gateway          │ $2,195  │ $2.87 │ $500 off    │ 11/28/24 │
+├─────────────────────────┼─────────┼───────┼─────────────┼──────────┤
+│ MARKET AVG              │ $2,263  │ $2.97 │             │          │
+│ Subject vs Market       │  -2.8%  │ -1.3% │             │          │
+└─────────────────────────────────────────────────────────────────────┘
+
+```
+
+---
+
+### The API Interface
+
+```python
+@app.post("/api/v1/comps/search")
+async def search_comps(request: CompSearchRequest) -> CompSearchResponse:
+    """
+    Main endpoint for comp search.
+    """
+    pass
+
+class CompSearchRequest:
+    subject_property_id: str  # OR inline subject definition
+
+    # Required filters
+    comp_type: Literal["rental", "sales"]
+    radius_miles: float = 3.0
+
+    # Optional filters (if not provided, infer from subject)
+    property_types: List[str] = None
+    min_units: int = None
+    max_units: int = None
+    min_year_built: int = None
+    max_year_built: int = None
+    asset_classes: List[str] = None  # ["A", "B"]
+
+    # Sales-specific
+    min_sale_date: date = None
+    max_sale_date: date = None
+
+    # Output control
+    max_results: int = 10
+    include_unit_level: bool = True
+
+class CompSearchResponse:
+    subject: Property
+    comps: List[RankedComp]
+    market_summary: MarketSummary
+    unit_level_analysis: List[UnitTypeComp]  # if requested
+
+```
+
+---
+
+Let me search for some context on HED and Kurt Volkman to help you prepare.This is great context. Here's how I'd approach the call with Kurt:
+
+## Understanding Kurt's World
+
+Kurt is the **Housing & Mixed-Use Sector Leader** at HED, a top-200 US design firm with 400+ employees across 9 offices. He's got 27+ years of experience working with major developers like Hines, Vornado, Kairoi Residential, and Northwestern Mutual. His philosophy centers on "Enlightened Urbanism" combining evidence-based design, wellness, and sustainability.
+
+Key insight: He explicitly says he *"pushes to get as much information in front of clients early in the process to equip them with the ability to make key decisions."* That's literally what Nura does.
+
+## Framing the Conversation
+
+**Don't lead with "buy Nura" — lead with his pain.**
+
+Architects at HED's scale dealing with multifamily/mixed-use face these problems:
+
+1. **Zoning chaos** — they're designing buildings only to discover late in the process that setbacks, FAR, height limits, or parking requirements kill the design
+2. **Repetitive due diligence** — every new site requires the same boring research that eats junior architect time
+3. **Developer clients asking "is this site even buildable?"** before HED can even start designing
+
+## Your Pitch Arc
+
+**Open with curiosity, not selling:**
+
+> "Kurt, I've been studying how architecture firms like HED approach early-stage feasibility on multifamily projects. When a developer client brings you a site, what does the first 2-3 weeks look like before design even starts?"
+> 
+
+Let him talk. He'll reveal pain points.
+
+**Bridge to Nura:**
+
+> "The reason I ask — we've built something at Nura that might be interesting. We're automating that entire pre-design diligence: zoning analysis, setbacks, allowable density, parking requirements, even preliminary pro formas. Developers are using it to know in hours what used to take weeks."
+> 
+
+**The design partner angle:**
+
+> "Honestly, the reason I wanted to talk to you specifically is that HED has this integrated approach — architecture and engineering working together early. We're building out our multifamily feasibility tools and I'd love your input on what actually matters to architects when evaluating a site. What information would make your life easier when a developer says 'can you design something on this parcel?'"
+> 
+
+## Making HED a Customer (Not Just Advisor)
+
+Once he's engaged, pivot:
+
+> "A few firms have started embedding this into their client acquisition — they can now respond to RFPs with preliminary feasibility baked in, or help developers evaluate multiple sites before committing to design fees. Would that kind of capability be valuable for HED's housing practice?"
+> 
+
+**The killer line for someone like Kurt:**
+
+> "You mentioned you want to get information in front of clients early to help them make decisions. What if you could show a developer client the zoning envelope, buildable density, and rough economics on Day 1 of the engagement?"
+> 
+
+## What to Prep
+
+1. **Have a Chicago multifamily site ready to demo** — pull something from HED's market
+2. **Know his recent projects** if you can find them — reference one specifically
+3. **Ask about his developer clients' biggest frustrations** — he'll tell you exactly what to build
+
+This positions Nura as a tool that makes HED more competitive and Kurt look like an innovator internally. That's how you get both a design partner *and* a paying customer.
+
+Real Estate Development Intelligence
+
+**SDR PLAYBOOK**
+
+Call Scripts, Tips & Demo Booking Guide
+
+Version 1.0 | January 2025
+
+**Table of Contents**
+
+**1. What Nura Does (30-Second Version)**
+
+**2. Your Target Verticals**
+
+**3. Pain Points by Persona**
+
+**4. Cold Call Scripts**
+
+**5. Objection Handling**
+
+**6. Discovery Questions**
+
+**7. Email Templates**
+
+**8. LinkedIn Outreach**
+
+**9. Tips for New SDRs**
+
+**10. Daily Workflow**
+
+**11. Qualification Checklist**
+
+**1. What Nura Does (30-Second Version)**
+
+***Memorize this. You'll say it 50+ times a day.***
+
+THE ELEVATOR PITCH
+
+"Nura is an AI platform that automates feasibility studies for real estate developers. We take what used to cost $15-30K and 2-3 weeks with consultants and deliver it in under 60 seconds for a flat monthly fee. We handle zoning compliance, environmental due diligence, construction cost estimates, rental comps, and full pro forma generation—all automated."
+
+---
+
+**Key Stats to Know**
+
+- 17 enterprise customers paying $5K/month
+- $0 to $1.4M ARR in 3 months
+- Zero churn since launch
+- Reports delivered in <60 seconds vs. weeks
+- Backed by Afore Capital
+
+**2. Your Target Verticals**
+
+***Each vertical has different pain points. Know who you're calling.***
+
+| **Vertical** | **What They Do** | **Why They Need Nura** |
+| --- | --- | --- |
+| RE Development Firms | Buy land, build projects (multifamily, commercial, mixed-use) | Speed up site evaluation; analyze 10x more deals |
+| Appraisers | Value properties for lenders, buyers, estates | Automate highest-and-best-use analysis |
+| Commercial Brokers | Sell land/buildings, need development potential analysis | Generate BOVs instantly; win more listings |
+| Land Use Consultants | Navigate zoning, entitlements, permits for clients | Automate zoning research; focus on strategy |
+| Lenders | Provide construction/acquisition loans | Validate borrower projections; reduce risk |
+
+**Titles to Target**
+
+**Decision Makers: CEO, President, Managing Partner, Principal, VP of Development, VP of Acquisitions, Chief Investment Officer**
+
+**Influencers: Director of Development, Development Manager, Acquisitions Manager, Senior Analyst, Underwriter**
+
+**Avoid: Junior analysts, administrative assistants, HR**
+
+**3. Pain Points by Persona**
+
+***Match your pitch to their specific pain. This is what makes you sound credible.***
+
+**Real Estate Developers**
+
+| **Pain Point** | **What You Say** |
+| --- | --- |
+| Feasibility studies cost $15-30K each | "What if you could run unlimited feasibility studies for a flat monthly fee?" |
+| Takes 2-3 weeks to get results back | "Our customers get complete reports in under 60 seconds." |
+| Can only evaluate 2-3 sites per month | "What if your team could analyze 50 sites in the time it takes to do one?" |
+| Miss deals because due diligence is too slow | "How many deals have you lost because someone else moved faster?" |
+
+**Appraisers**
+
+| **Pain Point** | **What You Say** |
+| --- | --- |
+| Highest-and-best-use analysis is time-consuming | "We automate the entire HBU analysis—zoning, density, use cases." |
+| Zoning research takes hours per property | "Pull complete zoning data for any parcel in seconds." |
+| Hard to justify development value opinions | "Our reports include buildable area, unit counts, and pro formas to back your conclusions." |
+
+**Brokers**
+
+| **Pain Point** | **What You Say** |
+| --- | --- |
+| Need to show development potential to win listings | "Generate instant BOVs showing what can be built on any site." |
+| Competing brokers have better marketing materials | "Walk into pitches with institutional-grade feasibility reports." |
+| Can't afford to commission studies for every listing | "Unlimited reports for a flat fee—run one for every potential listing." |
+
+**Land Use Consultants**
+
+| **Pain Point** | **What You Say** |
+| --- | --- |
+| Spend hours on zoning code research | "We've digitized zoning codes nationwide. Pull setbacks, FAR, height limits instantly." |
+| Clients want quick answers on feasibility | "Give clients preliminary feasibility within minutes of their call." |
+| Research is commoditized; need to add more value | "Automate the research so you can focus on strategy and relationships." |
+
+**Lenders**
+
+| **Pain Point** | **What You Say** |
+| --- | --- |
+| Relying on borrower's pro forma without verification | "Run an independent feasibility check in 60 seconds before approving any loan." |
+| Underwriting takes too long | "Get instant zoning verification and construction cost estimates." |
+| Risk of over-lending on unrealistic projections | "Validate unit counts, buildable area, and rental assumptions automatically." |
+
+**4. Cold Call Scripts**
+
+***Don't read these word-for-word. Internalize the structure, then make it your own.***
+
+**Universal Cold Call Structure**
+
+THE OPENER (5 seconds)
+
+"Hey [NAME], this is [YOUR NAME] with Nura—did I catch you at a bad time?"
+
+Why this works:
+
+- Asking "bad time?" is pattern-interrupting—most cold callers don't ask
+- If they say "yes, bad time" you say "No problem, when's better?" and you've got a callback
+- If they say "no" or "what is it?" you've earned 30 seconds
+
+---
+
+THE HOOK (15 seconds)
+
+"Reason I'm calling—we work with [VERTICAL] like [SIMILAR COMPANY IF YOU KNOW ONE] and we've built an AI that does feasibility studies in under 60 seconds. I'm not sure if that's relevant for you, but I figured it was worth a quick call."
+
+Why this works:
+
+- "I'm not sure if that's relevant" is low-pressure and disarming
+- The 60-second claim is specific and attention-grabbing
+- You're not selling—you're seeing if there's fit
+
+---
+
+THE QUESTION (get them talking)
+
+"Quick question—when you're evaluating a new site, how long does it typically take your team to get a feasibility study done?"
+
+Why this works:
+
+- Gets them talking about their pain
+- Whatever they answer, you can tie back to Nura
+- "2-3 weeks" → "What if it was 60 seconds?"
+- "We use consultants" → "How much does that run you per study?"
+
+---
+
+THE ASK (book the meeting)
+
+"Look, I don't want to take more of your time right now. Would it make sense to set up 20 minutes where I can show you the platform on one of your actual sites? That way you can see if it's useful—no pitch, just a demo."
+
+Why this works:
+
+- "No pitch, just a demo" reduces friction
+- "Your actual sites" makes it tangible and relevant
+- 20 minutes is a low commitment
+
+---
+
+**Vertical-Specific Hooks**
+
+***Swap these into the "Hook" section based on who you're calling.***
+
+**For Developers**
+
+**"Reason I'm calling—we've built an AI that lets development teams run unlimited feasibility studies for a flat monthly fee. So instead of spending $20K and waiting 3 weeks per site, you get zoning, pro forma, and construction estimates in under a minute. A few firms in [THEIR MARKET] are using us to look at way more deals than they could before."**
+
+**For Appraisers**
+
+**"Reason I'm calling—we've built a platform that automates highest-and-best-use analysis. It pulls zoning, calculates buildable area, runs development scenarios, and generates a full feasibility report. A few appraisal firms are using it to cut their research time in half and strengthen their development value opinions."**
+
+**For Brokers**
+
+**"Reason I'm calling—we work with land brokers who need to show development potential to win listings. Our platform generates instant feasibility reports showing what can be built on any site—zoning, unit counts, pro forma—the whole package. A few brokers are using it in their listing pitches to stand out."**
+
+**For Land Use Consultants**
+
+**"Reason I'm calling—we've digitized zoning codes across the country and built an AI that does instant feasibility analysis. A few land use consultants are using it to give clients preliminary answers in minutes instead of days, and to automate the research side so they can focus on strategy."**
+
+**For Lenders**
+
+**"Reason I'm calling—we've built a platform that lets construction lenders independently verify borrower projections in under 60 seconds. It checks zoning compliance, validates unit counts, and runs an independent pro forma. A few lenders are using it to de-risk their underwriting process."**
+
+**5. Objection Handling**
+
+***Objections are good—they mean they're engaged. Use the ACR framework: Acknowledge, Clarify, Respond.***
+
+| **Objection** | **Response** |
+| --- | --- |
+| "We already have a process for this" | "Totally get it—most of our customers did too. Quick question: how long does your current process take per site? [WAIT] Got it. What we're seeing is teams using Nura to screen sites in seconds before going deep on the ones worth the effort. It doesn't replace your process—it just means you only run your process on the good sites." |
+| "We use consultants" | "That makes sense for detailed work. What most firms are doing is using Nura for the first pass—screen 10 sites in 10 minutes, then send the 2-3 best ones to consultants. Saves money and time." |
+| "Send me an email" | "Happy to. Quick question so I don't waste your time—is this something you'd actually look at, or is that a polite 'no'? Either is fine, I just want to be helpful." [IF YES]: "Cool—what's one thing you'd want to see in that email?" |
+| "Not a good time" | "No problem at all. When would be better—later this week or early next?" |
+| "What does it cost?" | "Our enterprise customers pay around $5K a month for unlimited reports. But honestly, the best way to see if it's worth it is a quick demo—I can show you the platform on one of your actual sites in 20 minutes." |
+| "Never heard of you" | "That's fair—we're a newer company. We've got 17 enterprise customers right now, went from zero to $1.4M in revenue in about 3 months. Happy to show you what we do—only takes 20 minutes." |
+| "How accurate is the data?" | "Great question. We pull from county assessor databases, municipal zoning codes, and verified data sources. Our customers use our reports for initial screening and due diligence—they're finding it's as good or better than what they were paying consultants for." |
+| "I'm not the right person" | "No problem—who handles site evaluation or acquisitions on your team? I'd love an intro if you think it's relevant." |
+
+**6. Discovery Questions**
+
+***Use these to qualify and build rapport. Don't interrogate—have a conversation.***
+
+**Understanding Their Process**
+
+- How many sites do you typically evaluate in a month?
+- Walk me through what happens when a new site comes across your desk.
+- Who does the initial feasibility work—in-house or consultants?
+- How long does it usually take to know if a site is worth pursuing?
+
+**Uncovering Pain**
+
+- What's the most frustrating part of the feasibility process?
+- Have you ever lost a deal because due diligence took too long?
+- How much are you spending on feasibility studies per year?
+- If you could look at twice as many sites with the same team, what would that mean for your business?
+
+**Qualification (BANT)**
+
+- Budget: "Do you have budget allocated for tools like this, or would this need to be approved?"
+- Authority: "Who else would need to be involved in evaluating something like this?"
+- Need: "On a scale of 1-10, how much of a priority is speeding up your feasibility process?"
+- Timeline: "If this looked like a fit, how quickly would you want to move?"
+
+**7. Email Templates**
+
+***Keep emails under 100 words. One idea per email. One clear CTA.***
+
+**Cold Email #1 (The Opener)**
+
+Subject: Quick question about [COMPANY]'s feasibility process
+
+Hi [NAME],
+
+When your team evaluates a new site, how long does the feasibility study typically take?
+
+We've built an AI that does it in under 60 seconds—zoning, pro forma, construction costs, the works. A few developers in [MARKET] are using it to screen way more deals than before.
+
+Worth a quick demo?
+
+[YOUR NAME]
+
+---
+
+**Cold Email #2 (The Value Add)**
+
+Subject: [SITE ADDRESS] - what can be built here?
+
+Hi [NAME],
+
+I ran [SITE ADDRESS] through our platform—looks like you could fit [X units] with current zoning. Want me to send over the full report?
+
+Takes 20 minutes to show you how it works on any of your sites.
+
+[YOUR NAME]
+
+---
+
+**Follow-Up Email (After No Response)**
+
+Subject: Re: [PREVIOUS SUBJECT]
+
+Hi [NAME],
+
+Circling back—is speeding up site feasibility something on your radar right now?
+
+If not, no worries. If so, happy to show you what we're doing in 20 minutes.
+
+[YOUR NAME]
+
+---
+
+**Breakup Email**
+
+Subject: Should I close your file?
+
+Hi [NAME],
+
+I've reached out a few times about Nura. I'm guessing the timing isn't right—totally understand.
+
+I'll close your file for now, but feel free to reach out if faster feasibility studies ever become a priority.
+
+[YOUR NAME]
+
+---
+
+**8. LinkedIn Outreach**
+
+**Connection Request (Under 300 characters)**
+
+Hi [NAME]—saw you're leading development at [COMPANY]. We're helping developers automate feasibility studies (60 seconds vs. weeks). Would love to connect and share what we're seeing in [MARKET].
+
+---
+
+**Follow-Up DM (After Connection)**
+
+Thanks for connecting! Quick question—how's your team handling site feasibility right now? We've been working with a few developers in [MARKET] who were frustrated with how long it was taking. Happy to show you what we built if relevant.
+
+---
+
+**9. Tips for New SDRs**
+
+***This is the stuff that took me months to learn. Read it twice.***
+
+**Mindset**
+
+1. **You're not begging—you're offering value.** Nura saves people time and money. If they don't want it, that's fine, but you're not bothering them—you're giving them a chance to work smarter.
+2. **Rejection is data, not failure.** Every "no" teaches you something. Every bad call makes the next one better. The only way to fail is to stop calling.
+3. **Activity beats perfection.** A mediocre email sent is better than a perfect email stuck in drafts. Make the call. Send the message. You'll get better by doing.
+4. **Curiosity is your superpower.** You're not there to pitch—you're there to understand. Ask questions. Listen. The best SDRs are the most curious.
+
+**Tactics**
+
+1. **Call first, email second.** Emails are easy to ignore. Calls break through. Make the call, then send the email as a follow-up.
+2. **Research before you call (but don't over-research).** 2 minutes max. Know their name, company, and one thing about them. That's it. Move.
+3. **Talk less, listen more.** If you're talking more than 30% of the call, you're talking too much. Ask a question and shut up.
+4. **Always get a next step.** Never end a call without a clear next action. Demo scheduled? Great. Call back Thursday? Put it on the calendar. "I'll follow up" is not a next step.
+5. **Send calendar invites immediately.** The second they agree to a meeting, send the invite while you're still on the phone. Meetings without invites don't happen.
+6. **Log everything.** If it's not in the CRM, it didn't happen. Notes, next steps, dates—all of it.
+
+**Common Mistakes to Avoid**
+
+- **Pitching too early.** Don't vomit features. Ask questions first.
+- **Talking about yourself.** They don't care about Nura. They care about their problems.
+- **Being afraid of silence.** Ask a question and wait. Silence is uncomfortable—use it.
+- **Taking "no" personally.** They're not rejecting you. They're busy. Call back later.
+- **Giving up after one attempt.** It takes 8-12 touches to book a meeting. Most SDRs give up after 2.
+
+**10. Daily Workflow**
+
+| **Time** | **Activity** | **Notes** |
+| --- | --- | --- |
+| 8:00 - 8:30 | Prep & Planning | Review call list, check emails, update CRM |
+| 8:30 - 10:30 | Power Hour #1: Calls | Dial like your life depends on it. No email, no Slack. |
+| 10:30 - 11:30 | Email Block | Send follow-ups, cold emails. Track in sequences. |
+| 11:30 - 12:00 | LinkedIn Outreach | Connection requests, DMs, engagement. |
+| 12:00 - 1:00 | Lunch | Step away. Recharge. |
+| 1:00 - 3:00 | Power Hour #2: Calls | Another 2 hours of calls. Best time to reach people. |
+| 3:00 - 4:00 | Prospecting | Build tomorrow's call list. Research accounts. |
+| 4:00 - 5:00 | Follow-Ups & Admin | Send calendar invites, update CRM, prep for tomorrow. |
+
+**Daily Targets**
+
+- **50+ dials** (you'll connect on maybe 10-15)
+- **25+ personalized emails**
+- **10+ LinkedIn touches**
+- **2-3 meetings booked** (this is the goal—everything else is a means to this)
+
+**11. Qualification Checklist**
+
+***Before you book a demo, make sure you can answer these questions.***
+
+| **✓** | **Question** | **What Good Looks Like** |
+| --- | --- | --- |
+| ☐ | Is this an ICP company? | Developer, appraiser, broker, land use consultant, or lender |
+| ☐ | Is this the right contact? | Director+ or Manager with influence over tools/process |
+| ☐ | Did they acknowledge a pain point? | "Yeah, feasibility takes forever" or similar |
+| ☐ | Is there a clear next step? | Demo scheduled with date/time confirmed |
+| ☐ | Do they have budget/authority (or path to it)? | Can make or influence $5K/month decisions |
+
+**Red Flags (Don't Book the Demo)**
+
+- "I'm just researching" with no timeline
+- Can't articulate any pain or need
+- Company is too small (< 5 employees, no real deal flow)
+- Contact has no buying power and won't introduce you to someone who does
+- They're a student, consultant, or someone clearly not in a buying position
+
+REMEMBER
+
+Every demo you book is a chance for someone to see how Nura can transform their business. Your job isn't to sell—it's to find the people who need this and get them in front of the product. The product sells itself.
+
+---
+
+Grant Cardone
+
+> **Owner:** Karthik (Engineering)
+**Stakeholders:** Usman (CEO)
+**Target:** 25 West MI counties → 50-state expansion
+**Last Updated:** March 2026
+> 
+
+---
+
+## 📌 TL;DR
+
+The list with all municipalities: 
+
+[west_michigan_municipalities.xlsx](attachment:746ca15c-a20f-4032-8fd6-d238e3168e41:west_michigan_municipalities.xlsx)
+
+Build the ontology-based knowledge graph that ingests GIS and county tax assessor data for all 592+ municipalities across 25 West Michigan counties. This is the backbone of Nura's proprietary deal memory, powering the 32-filter deal finder, floor plan fit analysis, opposition risk scoring, and pro forma generation. The architecture must be designed for 50-state scale from day one.
+
+---
+
+## 🧠 Ontology Schema
+
+The knowledge graph models real estate development intelligence as a connected entity graph. Every node is typed; every edge is labeled.
+
+### Core Entity Types
+
+| Entity Type | Description | Primary Source |
+| --- | --- | --- |
+| `Parcel` | Individual land parcel with PIN, geometry, acreage | County GIS / Regrid |
+| `Jurisdiction` | Municipality — city, village, township, county | Census TIGER / Municode |
+| `ZoningDistrict` | Zoning classification (R-1, C-2, PUD, etc.) | County GIS / Municode / eCode360 |
+| `ZoningOrdinance` | Full text + parsed rules for a zoning district | Municode / eCode360 / American Legal |
+| `TaxRecord` | Assessed value, taxable value, SEV, millage, exemptions | County Tax Assessor / Equalization Dept |
+| `Owner` | Current owner entity (person, LLC, trust) | County Tax Assessor / Regrid |
+| `Structure` | Existing building on parcel — type, sqft, year built | County Assessor / ATTOM |
+| `Transaction` | Sale/transfer history — date, price, instrument | County Register of Deeds / ATTOM |
+| `Permit` | Building permits, demolition, special use | Municipal permit portals |
+| `EntitlementCase` | Rezoning, variance, site plan, PUD applications | Municipal meeting minutes / agendas |
+| `FloodZone` | FEMA flood zone designation per parcel | FEMA NFHL |
+| `Wetland` | NWI wetland boundaries overlapping parcels | USFWS NWI |
+| `Utility` | Water, sewer, gas, electric service availability | Municipal GIS / utility providers |
+| `SchoolDistrict` | School district boundaries + ratings | NCES / GreatSchools |
+| `CensusBlock` | Demographics, income, population density | ACS / Census Bureau |
+
+### Core Relationships (Edges)
+
+| From | Edge | To |
+| --- | --- | --- |
+| `Parcel` | `LOCATED_IN` | `Jurisdiction` |
+| `Parcel` | `ZONED_AS` | `ZoningDistrict` |
+| `Parcel` | `HAS_TAX_RECORD` | `TaxRecord` |
+| `Parcel` | `OWNED_BY` | `Owner` |
+| `Parcel` | `HAS_STRUCTURE` | `Structure` |
+| `Parcel` | `HAS_TRANSACTION` | `Transaction` |
+| `Parcel` | `HAS_PERMIT` | `Permit` |
+| `Parcel` | `SUBJECT_OF` | `EntitlementCase` |
+| `Parcel` | `IN_FLOOD_ZONE` | `FloodZone` |
+| `Parcel` | `OVERLAPS_WETLAND` | `Wetland` |
+| `Parcel` | `SERVED_BY` | `Utility` |
+| `Parcel` | `IN_SCHOOL_DISTRICT` | `SchoolDistrict` |
+| `Parcel` | `IN_CENSUS_BLOCK` | `CensusBlock` |
+| `ZoningDistrict` | `GOVERNED_BY` | `ZoningOrdinance` |
+| `ZoningDistrict` | `BELONGS_TO` | `Jurisdiction` |
+| `Owner` | `OWNS_MULTIPLE` | `Parcel` (portfolio detection) |
+| `Transaction` | `BUYER` | `Owner` |
+| `Transaction` | `SELLER` | `Owner` |
+| `EntitlementCase` | `DECIDED_BY` | `Jurisdiction` |
+
+### Derived / Computed Edges
+
+| Edge | Logic |
+| --- | --- |
+| `ADJACENT_TO` | Parcels sharing a boundary (PostGIS `ST_Touches`) |
+| `ASSEMBLAGE_CANDIDATE` | Adjacent parcels with same owner or compatible zoning |
+| `OPPOSITION_RISK` | Parcel → score derived from nearby `EntitlementCase` denial patterns |
+| `DEVELOPMENT_POTENTIAL` | Parcel → score from zoning capacity vs. current use |
+
+---
+
+## 🗺️ Coverage Scope — West Michigan (25 Counties, 592+ Municipalities)
+
+### Lakeshore Counties
+
+- **Berrien** — Benton Harbor, St. Joseph, Niles, New Buffalo + 22 townships
+- **Van Buren** — South Haven, Paw Paw, Bangor, Hartford + 18 townships
+- **Allegan** — Allegan, Saugatuck, Otsego, Plainwell, Holland (partial) + 24 townships
+- **Ottawa** — Grand Haven, Holland (partial), Zeeland, Hudsonville + 17 townships
+- **Muskegon** — Muskegon, Norton Shores, Whitehall, Montague + 16 townships
+- **Oceana** — Hart, Pentwater, Shelby + 14 townships
+- **Mason** — Ludington, Scottville + 15 townships
+- **Manistee** — Manistee, Onekama, Bear Lake + 13 townships
+- **Benzie** — Frankfort, Beulah, Benzonia + 12 townships
+- **Leelanau** — Leland, Suttons Bay, Northport, Empire + 11 townships
+- **Grand Traverse** — Traverse City, Kingsley + 13 townships
+
+### Inland Counties
+
+- **Kent** — Grand Rapids, Wyoming, Kentwood, Walker, Grandville + 20 townships
+- **Ionia** — Ionia, Belding, Portland + 16 townships
+- **Barry** — Hastings, Nashville, Middleville + 16 townships
+- **Kalamazoo** — Kalamazoo, Portage, Galesburg + 15 townships
+- **Calhoun** — Battle Creek, Marshall, Albion + 18 townships
+- **Branch** — Coldwater, Bronson + 14 townships
+- **St. Joseph** — Three Rivers, Sturgis, Constantine + 16 townships
+- **Cass** — Dowagiac, Cassopolis, Edwardsburg + 15 townships
+- **Newaygo** — Newaygo, Fremont, White Cloud, Grant + 20 townships
+- **Mecosta** — Big Rapids, Morley, Stanwood + 16 townships
+- **Osceola** — Reed City, Evart, Marion + 16 townships
+- **Lake** — Baldwin, Luther + 15 townships
+- **Montcalm** — Greenville, Stanton, Carson City + 18 townships
+- **Wexford** — Cadillac, Manton, Mesick + 17 townships
+
+---
+
+## 🔌 Data Sources & Ingestion Strategy
+
+### Tier 1 — Parcel + Tax (Ingest First)
+
+| Source | Data | Format | Refresh Cadence | Notes |
+| --- | --- | --- | --- | --- |
+| **Regrid** (Enterprise) | Parcel boundaries, PINs, owner, zoning label, land use | GeoJSON / API | Monthly | $50K/yr license under negotiation; covers all 25 counties |
+| **County GIS Portals** | Parcel geometry, zoning maps, flood zones | Shapefile / WFS / REST | Quarterly | Each county has different portal — see county matrix below |
+| **County Tax Assessor / Equalization** | SEV, taxable value, assessed value, millage, exemptions | CSV / PDF / CAMA API | Annually (Dec board of review) | Some counties use BS&A, some use Equalizer |
+| **ATTOM** | Property characteristics, transaction history, AVM | API | Monthly | Already integrated |
+
+### Tier 2 — Zoning + Ordinances
+
+| Source | Data | Format | Refresh Cadence | Notes |
+| --- | --- | --- | --- | --- |
+| **Municode** | Zoning ordinance full text (majority of MI municipalities) | HTML scrape / API | On amendment | Need per-municipality mapping |
+| **eCode360** | Zoning ordinance full text (some MI municipalities) | HTML scrape | On amendment | Overlaps with Municode |
+| **American Legal** | Zoning ordinance full text (remaining municipalities) | HTML / PDF | On amendment | Smaller coverage |
+| **County GIS** | Zoning district boundaries (spatial) | Shapefile / GeoJSON | Quarterly | Must cross-reference with ordinance text |
+
+### Tier 3 — Enrichment Layers
+
+| Source | Data | Format | Refresh Cadence |
+| --- | --- | --- | --- |
+| **FEMA NFHL** | Flood zones | Shapefile / WMS | Annually |
+| **USFWS NWI** | Wetland boundaries | Shapefile | Annually |
+| **Census / ACS** | Demographics, income, population | API | Annually |
+| **RSMeans** | Construction cost indices by region | API / CSV | Quarterly |
+| **Gallagher** | Insurance benchmarks (Builder's Risk, OCIP) | Internal | Quarterly |
+| **Municipal Portals** | Permits, meeting minutes, agendas | HTML scrape / PDF | Weekly |
+
+---
+
+## 🏗️ County-Level GIS Portal Matrix
+
+> ⚠️ **Kevin: This table needs to be validated and filled in during discovery sprint. Each county has a different tech stack.**
+> 
+
+| County | GIS Portal Type | Parcel Data Format | Tax System | Zoning Spatial? | API Available? |
+| --- | --- | --- | --- | --- | --- |
+| Kent | County GIS (AccessKent) | REST / Shapefile | BS&A | ✅ | ✅ REST |
+| Ottawa | County GIS | ArcGIS REST | BS&A | ✅ | ✅ REST |
+| Muskegon | County GIS | ArcGIS REST | BS&A | ✅ | ✅ REST |
+| Allegan | County GIS | Shapefile download | BS&A | Partial | ❌ |
+| Kalamazoo | County GIS | ArcGIS REST | BS&A | ✅ | ✅ REST |
+| Berrien | County GIS | ArcGIS REST | Equalizer | ✅ | ✅ REST |
+| Grand Traverse | County GIS | ArcGIS REST | BS&A | ✅ | ✅ REST |
+| Calhoun | County GIS | Shapefile | BS&A | Partial | ❌ |
+| Barry | Limited | Shapefile download | BS&A | ❌ | ❌ |
+| Ionia | Limited | Shapefile download | BS&A | ❌ | ❌ |
+| Van Buren | County GIS | ArcGIS REST | BS&A | Partial | ✅ REST |
+| Cass | Limited | Shapefile download | BS&A | ❌ | ❌ |
+| St. Joseph | Limited | Shapefile download | BS&A | ❌ | ❌ |
+| Branch | Limited | Shapefile download | BS&A | ❌ | ❌ |
+| Newaygo | Limited | Shapefile download | BS&A | ❌ | ❌ |
+| Mecosta | Limited | Shapefile | BS&A | ❌ | ❌ |
+| Osceola | Minimal | PDF / manual | BS&A | ❌ | ❌ |
+| Lake | Minimal | PDF / manual | BS&A | ❌ | ❌ |
+| Mason | County GIS | Shapefile | BS&A | Partial | ❌ |
+| Oceana | Limited | Shapefile | BS&A | ❌ | ❌ |
+| Manistee | Limited | Shapefile | BS&A | ❌ | ❌ |
+| Benzie | Minimal | PDF / manual | BS&A | ❌ | ❌ |
+| Leelanau | Limited | Shapefile | BS&A | ❌ | ❌ |
+| Montcalm | Limited | Shapefile | BS&A | ❌ | ❌ |
+| Wexford | Limited | Shapefile | BS&A | ❌ | ❌ |
+
+---
+
+## ⚙️ Architecture
+
+### Tech Stack
+
+| Component | Technology | Rationale |
+| --- | --- | --- |
+| **Knowledge Graph DB** | Neo4j (AuraDB Pro) or Amazon Neptune | Native graph traversal for relationship queries; Cypher for dev speed |
+| **Spatial Engine** | PostGIS (on Supabase or RDS) | Spatial joins, ST_Contains, ST_Touches, adjacency detection |
+| **Vector Store** | Pinecone or pgvector | Embedding zoning ordinance text for semantic search |
+| **Ordinance Parser** | Custom NLP pipeline (GPT-4 / Claude structured extraction) | Parse setbacks, FAR, lot coverage, permitted uses from ordinance HTML |
+| **ETL Orchestrator** | Prefect or Temporal | DAG-based pipelines per county with retry, monitoring, alerting |
+| **File Storage** | S3 | Raw shapefiles, PDFs, scraped HTML |
+| **Cache** | Redis | Geocoding cache, API rate limit tracking |
+| **API Layer** | FastAPI | Serves graph queries to Nura frontend |
+
+### Data Flow
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    RAW SOURCES                          │
+│  County GIS → Regrid API → Tax Assessor → Municode     │
+│  ATTOM → FEMA → Census → RSMeans → Municipal Portals   │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│                 INGESTION LAYER                         │
+│  Prefect DAGs per county/source                        │
+│  • Scraper workers (Municode, eCode360, portals)       │
+│  • API connectors (Regrid, ATTOM, Census)              │
+│  • File parsers (Shapefile, GeoJSON, CSV, PDF)         │
+│  • Deduplication + entity resolution                   │
+│  Raw → S3 (bronze layer)                               │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│              TRANSFORMATION LAYER                       │
+│  • Geometry normalization (EPSG:4326)                   │
+│  • Parcel → jurisdiction spatial join                   │
+│  • Zoning label → ordinance text linking                │
+│  • Owner entity resolution (LLC → beneficial owner)     │
+│  • Tax record normalization (SEV, TV, AV)               │
+│  • Ordinance NLP extraction (setbacks, FAR, uses)       │
+│  Cleaned → PostGIS (silver layer)                       │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│               KNOWLEDGE GRAPH LAYER                     │
+│  Neo4j / Neptune                                        │
+│  • Nodes: Parcel, Jurisdiction, ZoningDistrict, etc.    │
+│  • Edges: LOCATED_IN, ZONED_AS, OWNED_BY, etc.          │
+│  • Computed: ADJACENT_TO, ASSEMBLAGE_CANDIDATE,          │
+│    OPPOSITION_RISK, DEVELOPMENT_POTENTIAL                │
+│  Graph → Neo4j (gold layer)                             │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────┐
+│                APPLICATION LAYER                        │
+│  FastAPI → Nura Frontend                                │
+│  • 32-filter deal finder (graph traversal + spatial)    │
+│  • Floor plan fit analysis (Evergreene 58-plan catalog) │
+│  • Opposition risk scoring (239 DuPage model)           │
+│  • Pro forma generation (RSMeans + Gallagher + tax)     │
+│  • Off-market deal sourcing (owner portfolio detection) │
+│  • RAM CRM integration                                  │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📋 Implementation Plan
+
+### Phase 1 — Foundation
+
+- [ ]  Stand up PostGIS instance with parcel schema
+- [ ]  Stand up Neo4j instance with ontology schema
+- [ ]  Build Regrid API connector — ingest all 25 counties parcel boundaries
+- [ ]  Build county GIS connector template — start with Kent, Ottawa, Muskegon (REST APIs available)
+- [ ]  Validate parcel geometry + PIN uniqueness across jurisdictions
+- [ ]  Build `Parcel → LOCATED_IN → Jurisdiction` spatial join pipeline
+
+**Exit Criteria:** All 25 counties' parcel boundaries loaded with jurisdiction linkage. Query: "give me all parcels in Byron Township, Kent County" returns correct results.
+
+### Phase 2 — Tax + Ownership (Weeks 3–5)
+
+- [ ]  Build BS&A tax record scraper/connector (covers ~22 of 25 counties)
+- [ ]  Build Equalizer connector (Berrien County)
+- [ ]  Normalize tax fields: SEV, Taxable Value, Assessed Value, millage rates
+- [ ]  Entity resolution for owners (LLC name normalization, beneficial owner detection)
+- [ ]  Build `Parcel → HAS_TAX_RECORD → TaxRecord` and `Parcel → OWNED_BY → Owner` edges
+- [ ]  Build `Owner → OWNS_MULTIPLE → Parcel` portfolio detection
+- [ ]  Integrate ATTOM transaction history
+
+**Exit Criteria:** Every parcel has tax record + owner linked. Portfolio query: "show me all parcels owned by [LLC name] across West MI" works.
+
+### Phase 3 — Zoning Intelligence (Weeks 5–8)
+
+- [ ]  Map each of 592 municipalities to their ordinance source (Municode / eCode360 / American Legal)
+- [ ]  Build Municode scraper — extract zoning district definitions + full ordinance text
+- [ ]  Build eCode360 scraper
+- [ ]  Build ordinance NLP parser — extract: permitted uses, conditional uses, setbacks (front/side/rear), max height, FAR, lot coverage, min lot size, density, parking requirements
+- [ ]  Build `Parcel → ZONED_AS → ZoningDistrict → GOVERNED_BY → ZoningOrdinance` chain
+- [ ]  Embed ordinance text chunks → vector store for semantic search
+- [ ]  Validate against HED Architecture pilot feedback (construction type reclassification, floor area definitions, CA density bonus)
+
+**Exit Criteria:** Query: "What can I build on parcel [PIN] in [Township]?" returns structured zoning constraints. Semantic search: "which West MI jurisdictions allow mixed-use by right?" returns ranked results.
+
+### Phase 4 — Enrichment + Computed Edges (Weeks 8–11)
+
+- [ ]  Ingest FEMA flood zones → `Parcel → IN_FLOOD_ZONE → FloodZone`
+- [ ]  Ingest NWI wetlands → `Parcel → OVERLAPS_WETLAND → Wetland`
+- [ ]  Ingest Census/ACS demographics → `Parcel → IN_CENSUS_BLOCK → CensusBlock`
+- [ ]  Build `ADJACENT_TO` edges via PostGIS ST_Touches
+- [ ]  Build `ASSEMBLAGE_CANDIDATE` detection (adjacent + same owner or compatible zoning)
+- [ ]  Port opposition risk model (trained on 239 DuPage County cases) to graph-based scoring
+- [ ]  Build `DEVELOPMENT_POTENTIAL` scoring (zoning capacity vs. current use underutilization)
+- [ ]  Integrate Gallagher insurance benchmarks + RSMeans cost data into pro forma graph path
+
+**Exit Criteria:** Full deal finder operational — all 32 filters queryable against the graph. Opposition risk score available per parcel. Pro forma generation pulls live data from graph.
+
+### Phase 5 — Production Hardening (Weeks 11–13)
+
+- [ ]  Build ETL monitoring dashboard (Prefect UI or custom)
+- [ ]  Set up data freshness alerting — flag stale county data
+- [ ]  Build incremental update pipelines (not full re-ingestion)
+- [ ]  Implement change detection — notify when parcel ownership changes, new permits, rezoning filings
+- [ ]  Load test graph queries at scale (target: <500ms for deal finder queries)
+- [ ]  Document county-specific quirks and manual overrides
+- [ ]  Build data coverage dashboard — % completeness per county per layer
+
+**Exit Criteria:** System runs autonomously with alerting. All 25 counties fully populated across all layers. Ready for 50-state template replication.
+
+---
+
+## 🔑 Key Design Decisions for Kevin
+
+### 1. Graph DB Choice: Neo4j vs. Neptune
+
+|  | Neo4j | Neptune |
+| --- | --- | --- |
+| Query language | Cypher (more expressive) | Gremlin / openCypher |
+| Managed hosting | AuraDB | AWS native |
+| Spatial support | Native spatial index | Need PostGIS sidecar anyway |
+| Cost | ~$1K–3K/mo at our scale | ~$800–2K/mo |
+| **Recommendation** | **Start here** — Cypher is faster to develop, spatial indexes help | Migrate later if AWS lock-in preferred |
+
+### 2. Regrid vs. Direct County Scraping
+
+Use Regrid as the **base parcel layer** for consistency, then **enrich with direct county data** where Regrid is incomplete (tax details, zoning spatial boundaries, permits). Regrid gives us nationwide coverage for 50-state expansion; county-direct gives us depth.
+
+### 3. Ordinance Parsing Strategy
+
+Don't try to build a universal ordinance parser. Instead:
+
+1. Parse each municipality's ordinance into structured JSON using LLM extraction (Claude / GPT-4)
+2. Store both raw HTML and structured extraction
+3. Use human-in-the-loop validation for first pass per municipality
+4. Re-run extraction when ordinance amendments detected
+
+### 4. Entity Resolution for Owners
+
+Michigan LLC records are at the state level (LARA). Cross-reference:
+
+- County tax assessor owner name
+- LARA LLC filings (Resident Agent, Registered Agent)
+- Regrid owner data
+- ATTOM deed records
+
+Use fuzzy matching + LLM-assisted entity resolution to link "SMITH DEVELOPMENT LLC" across counties.
+
+---
+
+## 📊 Success Metrics
+
+| Metric | Target |
+| --- | --- |
+| Parcel coverage (25 counties) | 100% of parcels with geometry + PIN |
+| Tax record linkage | >95% of parcels with current tax data |
+| Zoning classification | >90% of parcels with zoning district linked |
+| Ordinance parsing | >80% of municipalities with structured zoning rules |
+| Owner entity resolution | >85% accuracy on LLC → beneficial owner |
+| Query latency (deal finder) | <500ms p95 |
+| Data freshness — parcels | <30 days stale |
+| Data freshness — tax records | <90 days stale |
+| Data freshness — ordinances | <7 days after amendment |
+
+---
+
+## ⚠️ Risks & Mitigations
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| Rural counties have no API / digital GIS | Blocks full coverage | Regrid fills gaps; manual Shapefile download for remainder |
+| BS&A scraping blocked / rate-limited | Lose tax data for 22 counties | Negotiate bulk data purchase; cache aggressively |
+| Municode/eCode360 scraping fragile | Ordinance data breaks | Build resilient parser with fallback to PDF extraction |
+| Regrid enterprise license delayed | No base parcel layer | Use county GIS direct for Tier 1 counties; Regrid as enrichment |
+| Ordinance NLP extraction errors | Bad zoning constraints | Human-in-the-loop validation; flag low-confidence extractions |
+| Owner entity resolution false positives | Bad portfolio detection | Require 2+ matching signals before linking entities |
+
+---
+
+## 🔗 Dependencies
+
+- **Regrid enterprise license** — $50K/yr negotiation (Usman)
+- **Municode / eCode360 access** — verify ToS for scraping (Usman/legal)
+- **BS&A bulk data** — explore purchase vs. scraping (Kevin to research)
+- **Neo4j AuraDB** — provisioning (Kevin)
+- **PostGIS instance** — Supabase or RDS (Kevin)
+- **ATTOM API** — already integrated
+- **Gallagher benchmarks** — already integrated via partnership
+
+---
+
+## 📎 References
+
+- West Michigan Municipalities spreadsheet (592 municipalities, 25 counties)
+- Evergreene Homes 58-plan catalog (floor plan fit analysis)
+- DuPage County opposition model (239 cases)
+- HED Architecture pilot feedback (zoning accuracy)
+- Gallagher insurance benchmarks (Builder's Risk, OCIP rates)

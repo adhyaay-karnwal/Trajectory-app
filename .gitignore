@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Leftover nested template dir (delete locally if still present: sudo rm -rf petal)
+/petal/
